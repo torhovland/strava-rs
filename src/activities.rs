@@ -116,10 +116,14 @@ pub struct Cords{
 }
 
 impl Activity {
-    /// Get an Gear by id (the only option)
     pub fn get(token: &AccessToken, id: String) -> Result <Activity> {
         let url = api::v3(token, format!("activities/{}", id));
         http::get::<Activity>(&url[..])
+    }
+
+    pub fn athlete_activities(token: &AccessToken) -> Result <Vec<Activity>> {
+        let url = api::v3(token, "athlete/activities".to_string());
+        http::get::<Vec<Activity>>(&url[..])
     }
 }
 
@@ -132,11 +136,19 @@ pub struct Split;
 mod api_tests {
     use super::Activity;
     use api::AccessToken;
+    
     #[test]
     fn get_activity() {
         let id = "321934".to_string();
         let token = AccessToken::new_from_env().unwrap();
         let activity = Activity::get(&token,id);
         println!("{:?}",activity);
+    }
+
+    #[test]
+    fn get_athlete_activities() {
+        let token = AccessToken::new_from_env().unwrap();
+        let activities = Activity::athlete_activities(&token);
+        println!("{:?}",activities);
     }
 }
