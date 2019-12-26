@@ -22,7 +22,7 @@ pub struct Segment {
     start_latlng: Vec<f32>,
     end_latlng: Vec<f32>,
     climb_category: u8,
-    city: String,
+    city: Option<String>,
     state: String,
     country: String,
     private: bool,

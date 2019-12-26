@@ -148,7 +148,7 @@ mod api_tests {
     fn get_current_athlete() {
         let token = AccessToken::new_from_env().unwrap();
         let athlete = Athlete::get_current(&token).unwrap();
-        assert_eq!(athlete.resource_state, ResourceState::Detailed);
+        assert_eq!(athlete.resource_state, ResourceState::Summary);
     }
 
     #[test]
@@ -172,10 +172,10 @@ mod api_tests {
     fn get_other_athlete_stats() {
         let id = 1712082;
         let token = AccessToken::new_from_env().unwrap();
-        let athlete = Athlete::get(&token, id).unwrap();
-        match athlete.stats(&token) {
+        let athlete = Athlete::get(&token, id);
+        match athlete {
             Ok(_) => panic!("somehow got stats for other athlete"),
-            Err(ApiError::InvalidAccessToken) => (),
+            Err(Forbidden) => (),
             Err(e) => panic!("unexpected error type {:?}", e)
         }
     }
