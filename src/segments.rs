@@ -45,13 +45,13 @@ impl Segment {
     /// Fetch a Segment by id
     pub fn get(token: &AccessToken, id: u32) -> Result<Segment> {
         let url = api::v3(token, format!("segments/{}", id));
-        Ok(try!(http::get::<Segment>(&url[..])))
+        Ok(http::get::<Segment>(&url[..])?)
     }
 
     /// Get starred segments
     pub fn get_starred(token: &AccessToken) -> Result<Paginated<Segment>> {
         let url = api::v3(token, "segments/starred".to_string());
-        let segments = try!(http::get::<Vec<Segment>>(&url[..]));
+        let segments = http::get::<Vec<Segment>>(&url[..])?;
         Ok(Paginated::new(url, segments))
     }
 }

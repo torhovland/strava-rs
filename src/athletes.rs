@@ -132,7 +132,7 @@ impl Athlete {
     /// Get all KOMs for the Athlete.
     pub fn koms(&self, token: &AccessToken) -> Result<Paginated<SegmentEffort>> {
         let url = api::v3(token, format!("athletes/{}/koms", self.id));
-        let efforts = try!(http::get::<Vec<SegmentEffort>>(&url[..]));
+        let efforts = http::get::<Vec<SegmentEffort>>(&url[..])?;
         Ok(Paginated::new(url, efforts))
     }
 }

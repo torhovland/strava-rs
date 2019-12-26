@@ -43,7 +43,7 @@ impl SegmentEffort {
     /// TODO support filtering by date range
     pub fn list_for_segment(token: &AccessToken, id: u32) -> Result<Paginated<SegmentEffort>> {
         let url = api::v3(token, format!("segments/{}/all_efforts", id));
-        let efforts = try!(http::get::<Vec<SegmentEffort>>(&url[..]));
+        let efforts = http::get::<Vec<SegmentEffort>>(&url[..])?;
         Ok(Paginated::new(url, efforts))
     }
 }

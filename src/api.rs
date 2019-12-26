@@ -60,7 +60,7 @@ pub enum ResourceState {
 // handle this.
 impl Decodable for ResourceState {
     fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error> {
-        let num = try!(d.read_u8());
+        let num = d.read_u8()?;
         Ok(match num {
             0 => ResourceState::Unknown,
             1 => ResourceState::Meta,

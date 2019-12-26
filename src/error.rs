@@ -24,7 +24,7 @@ pub enum ApiError {
 pub type Result<T> = ::std::result::Result<T, ApiError>;
 
 impl Error for ApiError {
-    fn cause(&self) -> Option<&Error> {
+    fn cause(&self) -> Option<&dyn Error> {
         match *self {
             ApiError::InvalidJson(ref e) => Some(e),
             ApiError::Http(ref e) => Some(e),
