@@ -1,14 +1,13 @@
-//endpoint for reading activities 
-use error::Result;
-
-use api::{self, ResourceState, AccessToken};
-use http;
-use athletes::Athlete;
-use segmentefforts::SegmentEffort;
-use resources;
+use super::api::{v3, AccessToken, ResourceState};
+use super::athletes::Athlete;
+use super::error::Result;
+use super::http::get;
+use super::resources::Map;
+use super::segmentefforts::SegmentEffort;
+use serde::Deserialize;
 
 /// Activity Types
-#[derive(Debug,RustcDecodable)]
+#[derive(Debug, Deserialize)]
 pub enum ActivityType {
     Ride,
     Run,
@@ -38,10 +37,10 @@ pub enum ActivityType {
     Windsurf,
     Workout,
     Yoga,
-    Unknown
+    Unknown,
 }
 
-#[derive(Debug,RustcDecodable)]
+#[derive(Debug, Deserialize)]
 pub enum WorkoutType {
     DefaultRun = 0,
     RaceRun = 1,
@@ -52,7 +51,7 @@ pub enum WorkoutType {
     WorkoutRide = 12,
 }
 
-#[derive(Debug,RustcDecodable)]
+#[derive(Debug, Deserialize)]
 pub struct Activity {
     // Meta representation
     pub id: i32,
@@ -68,8 +67,8 @@ pub struct Activity {
     pub elapsed_time: i32,
     pub total_elevation_gain: f32,
     pub activity_type: ActivityType,
-    pub start_date: String, //TODO decode time from string 
-    pub start_date_local: String, //TODO decode time from string 
+    pub start_date: String,       //TODO decode time from string
+    pub start_date_local: String, //TODO decode time from string
     pub timezone: String,
     pub start_latlng: Cords,
     pub end_latlng: Cords,
@@ -78,7 +77,7 @@ pub struct Activity {
     pub comment_count: i32,
     pub athlete_count: i32,
     pub photo_count: i32,
-    pub map: resources::Map,
+    pub map: Map,
     pub trainer: bool,
     pub commute: bool,
     pub manual: bool,
@@ -105,30 +104,30 @@ pub struct Activity {
     pub segment_efforts: Vec<SegmentEffort>,
     pub splits_metric: Vec<Split>,
     pub splits_standard: Vec<Split>,
-    pub best_efforts: Vec<SegmentEffort>
+    pub best_efforts: Vec<SegmentEffort>,
     // TODO pub photos: Photos
 }
 
-#[derive(Debug,RustcDecodable)]
-pub struct Cords{
+#[derive(Debug, Deserialize)]
+pub struct Cords {
     x: f32,
     y: f32,
 }
 
 impl Activity {
-    pub fn get(token: &AccessToken, id: String) -> Result <Activity> {
-        let url = api::v3(token, format!("activities/{}", id));
-        http::get::<Activity>(&url[..])
+    pub async fn get(token: &AccessToken, id: String) -> Result<Activity> {
+        let url = v3(Some(token), format!("activities/{}", id));
+        Ok(get::<Activity>(&url[..]).await?)
     }
 
-    pub fn athlete_activities(token: &AccessToken) -> Result <Vec<Activity>> {
-        let url = api::v3(token, "athlete/activities".to_string());
-        http::get::<Vec<Activity>>(&url[..])
+    pub async fn athlete_activities(token: &AccessToken) -> Result<Vec<Activity>> {
+        let url = v3(Some(token), "athlete/activities".to_string());
+        Ok(get::<Vec<Activity>>(&url[..]).await?)
     }
 }
 
 #[allow(dead_code)]
-#[derive(Debug,RustcDecodable)]
+#[derive(Debug, Deserialize)]
 pub struct Split;
 
 #[cfg(feature = "api_test")]
@@ -136,19 +135,18 @@ pub struct Split;
 mod api_tests {
     use super::Activity;
     use api::AccessToken;
-    
     #[test]
     fn get_activity() {
         let id = "321934".to_string();
         let token = AccessToken::new_from_env().unwrap();
-        let activity = Activity::get(&token,id);
-        println!("{:?}",activity);
+        let activity = Activity::get(&token, id);
+        println!("{:?}", activity);
     }
 
     #[test]
     fn get_athlete_activities() {
         let token = AccessToken::new_from_env().unwrap();
         let activities = Activity::athlete_activities(&token);
-        println!("{:?}",activities);
+        println!("{:?}", activities);
     }
 }

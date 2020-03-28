@@ -1,9 +1,8 @@
 //strava clubs
-use error::Result;
-
-use api::{self, ResourceState, AccessToken};
-use http;
-
+use super::api::{v3, AccessToken, ResourceState};
+use super::error::Result;
+use super::http::get;
+use serde::Deserialize;
 
 /// Clubs represent groups of athletes on Strava.
 ///
@@ -12,7 +11,7 @@ use http;
 /// representations.
 ///
 /// See: http://strava.github.io/api/v3/clubs/
-#[derive(Debug, RustcDecodable)]
+#[derive(Debug, Deserialize)]
 pub struct Club {
     id: i32,
     resource_state: ResourceState,
@@ -33,23 +32,23 @@ pub struct Club {
     url: Option<String>,
 
     description: Option<String>,
-    club_type: Option<ClubType>, 
+    club_type: Option<ClubType>,
     membership: Option<String>,
     admin: Option<bool>,
     owner: Option<bool>,
-    following_count: Option<i32>,  
+    following_count: Option<i32>,
 }
 
 impl Club {
     /// Get an Gear by id (the only option)
-    pub fn get(token: &AccessToken, id: String) -> Result <Club> {
-        let url = api::v3(token, format!("clubs/{}", id));
-        http::get::<Club>(&url[..])
+    pub async fn get(token: &AccessToken, id: String) -> Result<Club> {
+        let url = v3(Some(token), format!("clubs/{}", id));
+        Ok(get::<Club>(&url[..]).await?)
     }
 }
 
 /// Types of sports
-#[derive(Debug, RustcDecodable)]
+#[derive(Debug, Deserialize)]
 #[allow(non_camel_case_types)]
 pub enum SportType {
     cycling,
@@ -59,7 +58,7 @@ pub enum SportType {
 }
 
 /// Types of clubs
-#[derive(Debug, RustcDecodable)]
+#[derive(Debug, Deserialize)]
 #[allow(non_camel_case_types)]
 pub enum ClubType {
     casual_club,
@@ -79,7 +78,7 @@ mod api_tests {
     fn get_club() {
         let id = "1".to_string();
         let token = AccessToken::new_from_env().unwrap();
-        let club = Club::get(&token,id);
-        println!("{:?}",club);
+        let club = Club::get(&token, id);
+        println!("{:?}", club);
     }
 }

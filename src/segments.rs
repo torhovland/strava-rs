@@ -1,14 +1,15 @@
 //! Specific sections of road and attempts an athlete has made on them
-use activities::ActivityType;
-use api::{self, Paginated, AccessToken, ResourceState};
-use error::Result;
-use http;
+use super::activities::ActivityType;
+use super::api::{v3, AccessToken, Paginated, ResourceState};
+use super::error::Result;
+use super::http::get;
+use serde::Deserialize;
 
 /// A specific section(s) of road.
 ///
 /// Segments are available in Summary and Detail versions.
 /// http://strava.github.io/api/v3/segments/
-#[derive(Debug, RustcDecodable)]
+#[derive(Debug, Deserialize)]
 pub struct Segment {
     id: u32,
     resource_state: ResourceState,
@@ -35,23 +36,21 @@ pub struct Segment {
     effort_count: Option<u32>,
     athlete_count: Option<u32>,
     star_count: Option<u32>,
-    hazardous: Option<bool>
-
-    // Properties on starred segments
-    // TODO atlete_pr_effort: Effort,
+    hazardous: Option<bool>, // Properties on starred segments
+                             // TODO atlete_pr_effort: Effort
 }
 
 impl Segment {
     /// Fetch a Segment by id
-    pub fn get(token: &AccessToken, id: u32) -> Result<Segment> {
-        let url = api::v3(token, format!("segments/{}", id));
-        Ok(http::get::<Segment>(&url[..])?)
+    pub async fn get(token: &AccessToken, id: u32) -> Result<Segment> {
+        let url = v3(Some(token), format!("segments/{}", id));
+        Ok(get::<Segment>(&url[..]).await?)
     }
 
     /// Get starred segments
-    pub fn get_starred(token: &AccessToken) -> Result<Paginated<Segment>> {
-        let url = api::v3(token, "segments/starred".to_string());
-        let segments = http::get::<Vec<Segment>>(&url[..])?;
+    pub async fn get_starred(token: &AccessToken) -> Result<Paginated<Segment>> {
+        let url = v3(Some(token), "segments/starred".to_string());
+        let segments = get::<Vec<Segment>>(&url[..]).await?;
         Ok(Paginated::new(url, segments))
     }
 }
@@ -76,5 +75,4 @@ mod api_tests {
         let starred = Segment::get_starred(&token).unwrap();
         println!("{:?}", starred);
     }
-
 }

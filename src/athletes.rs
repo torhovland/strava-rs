@@ -1,19 +1,19 @@
 //! Strava athletes and associated data
+use super::api::{v3, AccessToken, Paginated, ResourceState};
+use super::clubs::Club;
+use super::error::Result;
+use super::gear::Gear;
+use super::http::get;
+use super::segmentefforts::SegmentEffort;
+use serde::Deserialize;
 use std::option::Option;
-
-use api::{self, Paginated, AccessToken, ResourceState};
-use error::Result;
-use http;
-use gear::Gear;
-use clubs::Club;
-use segmentefforts::SegmentEffort;
 
 /// A strava athlete
 ///
 /// The object may be returned in detailed, summary or meta representations.
 ///
 /// See: http://strava.github.io/api/v3/athlete/
-#[derive(Debug, RustcDecodable)]
+#[derive(Debug, Deserialize)]
 pub struct Athlete {
     /// Athlete's ID on strava
     pub id: i32,
@@ -64,7 +64,7 @@ pub struct Athlete {
 }
 
 /// Types of athletes
-#[derive(Debug, RustcDecodable)]
+#[derive(Debug, Deserialize)]
 pub enum AthleteType {
     Cycling,
     Running,
@@ -76,7 +76,7 @@ pub enum AthleteType {
 /// and meters.
 ///
 /// http://strava.github.io/api/v3/athlete/#stats
-#[derive(Debug, RustcDecodable)]
+#[derive(Debug, Deserialize)]
 pub struct Stats {
     pub biggest_ride_distance: f32,
     pub biggest_climb_elevation_gain: f32,
@@ -89,50 +89,50 @@ pub struct Stats {
 }
 
 /// Total statistics for a recent time period
-#[derive(Debug, RustcDecodable)]
+#[derive(Debug, Deserialize)]
 pub struct RecentTotals {
     pub count: i32,
     pub distance: f32,
     pub moving_time: i32,
     pub elapsed_time: i32,
     pub elevation_gain: f32,
-    pub achievement_count: i32
+    pub achievement_count: i32,
 }
 
 /// Total statistics for an arbitrary time period
-#[derive(Debug, RustcDecodable)]
+#[derive(Debug, Deserialize)]
 pub struct Totals {
     pub count: i32,
     pub distance: i32,
     pub moving_time: i32,
     pub elapsed_time: i32,
-    pub elevation_gain: i32
+    pub elevation_gain: i32,
 }
 
 impl Athlete {
     /// Get the athlete associated with the given access token
-    pub fn get_current(token: &AccessToken) -> Result<Athlete> {
-        let url = api::v3(token, "athlete".to_string());
-        http::get::<Athlete>(&url[..])
+    pub async fn get_current(token: &AccessToken) -> Result<Athlete> {
+        let url = v3(Some(token), "athlete".to_string());
+        Ok(get::<Athlete>(&url[..]).await?)
     }
 
     /// Get an Athlete by id
-    pub fn get(token: &AccessToken, id: i32) -> Result<Athlete> {
-        let url = api::v3(token, format!("athletes/{}", id));
-        http::get::<Athlete>(&url[..])
+    pub async fn get(token: &AccessToken, id: i32) -> Result<Athlete> {
+        let url = v3(Some(token), format!("athletes/{}", id));
+        Ok(get::<Athlete>(&url[..]).await?)
     }
 
     /// Get stats for an athlete.
     /// This is only available for the currently authenticated athlete
-    pub fn stats(&self, token: &AccessToken) -> Result<Stats> {
-        let url = api::v3(token, format!("athletes/{}/stats", self.id));
-        http::get::<Stats>(&url[..])
+    pub async fn stats(&self, token: &AccessToken) -> Result<Stats> {
+        let url = v3(Some(token), format!("athletes/{}/stats", self.id));
+        Ok(get::<Stats>(&url[..]).await?)
     }
 
     /// Get all KOMs for the Athlete.
-    pub fn koms(&self, token: &AccessToken) -> Result<Paginated<SegmentEffort>> {
-        let url = api::v3(token, format!("athletes/{}/koms", self.id));
-        let efforts = http::get::<Vec<SegmentEffort>>(&url[..])?;
+    pub async fn koms(&self, token: &AccessToken) -> Result<Paginated<SegmentEffort>> {
+        let url = v3(Some(token), format!("athletes/{}/koms", self.id));
+        let efforts = get::<Vec<SegmentEffort>>(&url[..]).await?;
         Ok(Paginated::new(url, efforts))
     }
 }
@@ -140,8 +140,8 @@ impl Athlete {
 #[cfg(feature = "api_test")]
 #[cfg(test)]
 mod api_tests {
-    use api::{AccessToken, ResourceState};
     use super::Athlete;
+    use api::{AccessToken, ResourceState};
     use error::ApiError;
 
     #[test]
@@ -153,7 +153,7 @@ mod api_tests {
 
     #[test]
     fn get_athlete_by_id() {
-        let id = 1712082;
+        let id = 706298;
         let token = AccessToken::new_from_env().unwrap();
         let athlete = Athlete::get(&token, id).unwrap();
         assert_eq!(athlete.id, id);
@@ -176,7 +176,7 @@ mod api_tests {
         match athlete {
             Ok(_) => panic!("somehow got stats for other athlete"),
             Err(Forbidden) => (),
-            Err(e) => panic!("unexpected error type {:?}", e)
+            Err(e) => panic!("unexpected error type {:?}", e),
         }
     }
 
@@ -192,6 +192,6 @@ mod api_tests {
     fn print_response() {
         let token = AccessToken::new_from_env().unwrap();
         let athlete = Athlete::get_current(&token).unwrap();
-        println!("{:?}",athlete);
+        println!("{:?}", athlete);
     }
 }

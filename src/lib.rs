@@ -25,16 +25,13 @@
 //! let token = AccessToken::new("<my token>".to_string());
 //!
 //! // Get the athlete associated with the given token
-//! let athlete = Athlete::get_current(&token).unwrap();
+//! let athlete = Athlete::get_current(&token).await.unwrap();
 //!
 //! // All of the strava types implement Debug and can be printed like so:
 //! println!("{:?}", athlete);
 //! ```
 //!
 //! [Strava API Documentation]: http://strava.github.io/api/
-
-extern crate hyper;
-extern crate rustc_serialize;
 
 /// Internal http api which currently wraps hyper
 #[doc(hidden)]
@@ -54,4 +51,3 @@ pub mod segmentefforts;
 pub mod segments;
 pub mod streams;
 pub mod uploads;
-

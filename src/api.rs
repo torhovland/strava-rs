@@ -1,24 +1,32 @@
 //! Shared utility types and functions for the API
-use std::env;
+use super::http::refresh_tokens;
+use serde::Deserialize;
+use serde_repr::*;
 use std::convert::From;
-
-use rustc_serialize::{Decodable, Decoder};
+use std::env;
 
 #[doc(hidden)]
-pub fn v3(token: &AccessToken, url: String) -> String {
-    format!("https://www.strava.com/api/v3/{}?access_token={}", url, token.get())
+pub fn v3(token: Option<&AccessToken>, url: String) -> String {
+    match token {
+        Some(token) => format!(
+            "https://www.strava.com/api/v3/{}?access_token={}",
+            url,
+            token.get()
+        ),
+        None => format!("https://www.strava.com/api/v3/{}", url),
+    }
 }
 
 /// Wrapper for endpoints that paginate
 ///
 /// A Paginated<T> will be returned from any endpoint that supports paging. Provides methods for
 /// fetching the next page and checking if more pages are available.
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub struct Paginated<T> {
     page: usize,
     per_page: usize,
     url: String,
-    data: Vec<T>
+    data: Vec<T>,
 }
 
 impl<T> Paginated<T> {
@@ -44,50 +52,58 @@ impl<T> Paginated<T> {
     }
 }
 
-
 /// The level of detail for the current resource
 ///
 /// Detailed contains the most data and Meta the least.
-#[derive(Debug, PartialEq, RustcEncodable)]
+#[derive(Debug, PartialEq, Deserialize_repr)]
+#[repr(u8)]
 pub enum ResourceState {
-    Unknown,
-    Meta,
-    Summary,
-    Detailed,
-}
-
-// TODO refactor primitive conversion into custom trait. Maybe add a macro or compiler plugin to
-// handle this.
-impl Decodable for ResourceState {
-    fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error> {
-        let num = d.read_u8()?;
-        Ok(match num {
-            0 => ResourceState::Unknown,
-            1 => ResourceState::Meta,
-            2 => ResourceState::Summary,
-            3 => ResourceState::Detailed,
-            _ =>  unreachable!("ResourceState only valid for 0,1,2,3")
-        })
-    }
+    Unknown = 0,
+    Meta = 1,
+    Summary = 2,
+    Detailed = 3,
 }
 
 impl Default for ResourceState {
-    fn default () -> ResourceState { ResourceState::Unknown }
+    fn default() -> ResourceState {
+        ResourceState::Unknown
+    }
 }
 
-/// A strava.com api access token.
+/// A strava.com api refresh token.
 ///
 /// You'll need to register/login at https://www.strava.com/developers to get a token. This is
-/// required for all requests.
+/// required to get an access token.
+pub struct RefreshToken {
+    pub refresh_token: String,
+    pub client_id: String,
+    pub client_secret: String,
+}
+
+impl RefreshToken {
+    /// Create a RefreshToken from the supplied string
+    pub fn new(refresh_token: String, client_id: String, client_secret: String) -> RefreshToken {
+        RefreshToken {
+            refresh_token: refresh_token,
+            client_id: client_id,
+            client_secret: client_secret,
+        }
+    }
+}
+
+/// A strava.com api access token. This is required for all requests.
+#[derive(Debug, Deserialize)]
 pub struct AccessToken {
-    token: String
+    pub access_token: String,
+    pub refresh_token: String,
 }
 
 impl AccessToken {
     /// Create an AccessToken from the supplied string
     pub fn new(token: String) -> AccessToken {
         AccessToken {
-            token: token
+            access_token: token,
+            refresh_token: "".to_string(),
         }
     }
 
@@ -95,8 +111,12 @@ impl AccessToken {
     pub fn new_from_env() -> Result<AccessToken, env::VarError> {
         match env::var("STRAVA_ACCESS_TOKEN") {
             Ok(token) => Ok(AccessToken::new(token)),
-            Err(e) => Err(e)
+            Err(e) => Err(e),
         }
+    }
+
+    pub async fn get_current(refresh_token: &RefreshToken) -> super::error::Result<AccessToken> {
+        Ok(refresh_tokens(refresh_token).await?)
     }
 
     /// Get the token underlying string
@@ -104,13 +124,16 @@ impl AccessToken {
     /// This is used internally for building requests.
     // TODO implement Deref -> &str for AccessToken
     pub fn get(&self) -> &str {
-        &self.token[..]
+        &self.access_token[..]
     }
 }
 
 impl<'a> From<&'a str> for AccessToken {
     fn from(s: &'a str) -> AccessToken {
-        AccessToken { token: s.to_string() }
+        AccessToken {
+            access_token: s.to_string(),
+            refresh_token: "".to_string(),
+        }
     }
 }
 

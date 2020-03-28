@@ -1,3 +1,5 @@
 //! Types shared by primary strava resources
-#[derive(Debug,RustcDecodable)]
+use serde::Deserialize;
+
+#[derive(Debug, Deserialize)]
 pub struct Map;

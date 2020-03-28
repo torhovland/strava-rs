@@ -1,8 +1,8 @@
 //Individual pieces of gear
-use error::Result;
-
-use api::{self, ResourceState, AccessToken};
-use http;
+use super::api::{v3, AccessToken, ResourceState};
+use super::error::Result;
+use super::http::get;
+use serde::Deserialize;
 
 /// Gear type able to represent bikes/shoes/etc.
 ///
@@ -10,7 +10,7 @@ use http;
 /// representations.
 ///
 /// See: http://strava.github.io/api/v3/gear/
-#[derive(Debug, RustcDecodable)]
+#[derive(Debug, Deserialize)]
 pub struct Gear {
     pub id: String,
     pub primary: bool,
@@ -25,20 +25,20 @@ pub struct Gear {
 
 impl Gear {
     /// Get an Gear by id (the only option)
-    pub fn get(token: &AccessToken, id: String) -> Result<Gear> {
-        let url = api::v3(token, format!("gear/{}", id));
-        http::get::<Gear>(&url[..])
+    pub async fn get(token: &AccessToken, id: String) -> Result<Gear> {
+        let url = v3(Some(token), format!("gear/{}", id));
+        Ok(get::<Gear>(&url[..]).await?)
     }
 }
 
 /// Frame type for bikes
-#[derive(Debug, RustcDecodable)]
+#[derive(Debug, Deserialize)]
 #[allow(non_camel_case_types)]
 pub enum FrameType {
     MTB,
     Cross,
     Road,
-    TimeTrial
+    TimeTrial,
 }
 
 #[cfg(feature = "api_test")]
@@ -53,7 +53,7 @@ mod api_tests {
         //TODO find a real way to test this since it only works with gear id's of stuff you own
         let id = "g2164144".to_string();
         let token = AccessToken::new_from_env().unwrap();
-        let gear = Gear::get(&token,id);
-        println!("{:?}",gear);
+        let gear = Gear::get(&token, id);
+        println!("{:?}", gear);
     }
 }
